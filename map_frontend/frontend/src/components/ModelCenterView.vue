@@ -230,53 +230,378 @@
 
             <div class="flex-1 overflow-hidden flex flex-col">
 
-              <!-- Classic Form -->
+              <!-- ═══ CLASSIC FORM — Unified Parameter Panel ═══ -->
               <div v-if="selectedModel?.type === 'classic'" class="flex-1 overflow-y-auto p-4 no-scrollbar">
-                <div class="max-w-2xl mx-auto space-y-3">
-                  <div class="bg-[#161922] border border-[#2E3348] rounded p-4">
-                    <h3 class="am-title-l3 mb-3 border-b border-[#252A3A] pb-2 uppercase tracking-wider"><div class="am-title-bar"></div>数据源配置</h3>
-                    <div class="space-y-3">
-                      <div>
-                        <label class="block text-[11px] text-[#94A3B8] mb-1 uppercase tracking-wider font-mono">行情与宏观数据源</label>
-                        <select class="w-full operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none">
-                          <option>Wind API (万得)</option>
-                          <option>Bloomberg Terminal</option>
-                          <option>Choice 数据</option>
-                          <option>内部数仓 (Data Warehouse)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="block text-[11px] text-[#94A3B8] mb-1 uppercase tracking-wider font-mono">历史数据回溯区间</label>
-                        <div class="flex space-x-2">
-                          <input type="date" value="2015-01-01" class="flex-1 operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none" />
-                          <span class="text-[#64748B] self-center font-mono">—</span>
-                          <input type="date" value="2024-01-01" class="flex-1 operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none" />
+                <div class="max-w-3xl mx-auto space-y-2.5">
+
+                  <!-- Status Strip -->
+                  <div class="flex items-center justify-between text-[10px] font-mono text-[#555E75] px-0.5">
+                    <div class="flex items-center space-x-3">
+                      <span class="flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#3B9EFF] inline-block"></span>
+                        <span>{{ classicParams.assetUniverse.filter((a: any) => a.enabled).length }} 资产域已启用</span>
+                      </span>
+                      <span class="flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00C9A7] inline-block"></span>
+                        <span>{{ classicParams.dataSource }}</span>
+                      </span>
+                      <span class="flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#FFAB00] inline-block"></span>
+                        <span>{{ classicParams.rebalanceFreq }}调仓 · {{ classicParams.returnType }}</span>
+                      </span>
+                    </div>
+                    <button
+                      @click="resetClassicParams"
+                      class="text-[#3B9EFF]/60 hover:text-[#3B9EFF] transition-colors"
+                    >重置默认值</button>
+                  </div>
+
+                  <!-- ── Section 1: Data & Period ── -->
+                  <div class="bg-[#161922] border border-[#2E3348] rounded overflow-hidden">
+                    <button
+                      @click="expandedSections.data = !expandedSections.data"
+                      class="w-full px-4 py-2.5 flex items-center justify-between bg-[#1A1E2B] hover:bg-[#1E2235] transition-colors"
+                    >
+                      <h3 class="am-title-l3 flex items-center space-x-2.5">
+                        <div class="am-title-bar"></div>
+                        <span>数据域配置</span>
+                        <span class="text-[10px] font-mono text-[#555E75] tracking-widest ml-1">DATA CONFIG</span>
+                      </h3>
+                      <ArrowDown :class="cn('w-3 h-3 text-[#94A3B8] transition-transform duration-200', expandedSections.data ? 'rotate-180' : '')" />
+                    </button>
+                    <div v-show="expandedSections.data" class="p-4">
+                      <div class="grid grid-cols-2 gap-3">
+                        <!-- Data Source -->
+                        <div>
+                          <label class="block text-[11px] text-[#94A3B8] mb-1.5 uppercase tracking-wider font-mono">行情 & 宏观数据源</label>
+                          <select v-model="classicParams.dataSource" class="w-full operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none">
+                            <option>Wind API (万得)</option>
+                            <option>Bloomberg Terminal</option>
+                            <option>Choice 数据</option>
+                            <option>内部数仓 (Data Warehouse)</option>
+                          </select>
+                        </div>
+                        <!-- Return Type -->
+                        <div>
+                          <label class="block text-[11px] text-[#94A3B8] mb-1.5 uppercase tracking-wider font-mono">收益计算方式</label>
+                          <select v-model="classicParams.returnType" class="w-full operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none">
+                            <option>全收益</option>
+                            <option>价格收益</option>
+                            <option>超额收益</option>
+                          </select>
+                        </div>
+                        <!-- Date Range -->
+                        <div class="col-span-2">
+                          <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] text-[#94A3B8] uppercase tracking-wider font-mono">历史回溯区间</label>
+                            <div class="flex items-center space-x-1">
+                              <button
+                                v-for="p in DATE_PRESETS" :key="p.label"
+                                @click="applyDatePreset(p)"
+                                class="px-2 py-0.5 text-[10px] font-mono rounded border border-[#2E3348] text-[#94A3B8] hover:border-[#3B9EFF]/40 hover:text-[#3B9EFF] transition-colors"
+                              >{{ p.label }}</button>
+                            </div>
+                          </div>
+                          <div class="flex space-x-2">
+                            <input type="date" v-model="classicParams.startDate" class="flex-1 operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none" />
+                            <span class="text-[#555E75] self-center font-mono">—</span>
+                            <input type="date" v-model="classicParams.endDate" class="flex-1 operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none" />
+                          </div>
+                        </div>
+                        <!-- Rebalance Freq -->
+                        <div>
+                          <label class="block text-[11px] text-[#94A3B8] mb-1.5 uppercase tracking-wider font-mono">调仓频率</label>
+                          <div class="grid grid-cols-4 gap-1">
+                            <button
+                              v-for="freq in ['月度', '季度', '半年', '年度']" :key="freq"
+                              @click="classicParams.rebalanceFreq = freq"
+                              :class="cn('py-1.5 text-[12px] font-mono rounded border transition-colors', classicParams.rebalanceFreq === freq ? 'bg-[#3B9EFF]/12 border-[#3B9EFF]/30 text-[#3B9EFF]' : 'bg-[#161922] border-[#2E3348] text-[#555E75] hover:border-[#3E4660] hover:text-[#B4BAC9]')"
+                            >{{ freq }}</button>
+                          </div>
+                        </div>
+                        <!-- Currency -->
+                        <div>
+                          <label class="block text-[11px] text-[#94A3B8] mb-1.5 uppercase tracking-wider font-mono">计价货币</label>
+                          <div class="grid grid-cols-3 gap-1">
+                            <button
+                              v-for="ccy in ['CNY', 'USD', 'HKD']" :key="ccy"
+                              @click="classicParams.currency = ccy"
+                              :class="cn('py-1.5 text-[12px] font-mono rounded border transition-colors', classicParams.currency === ccy ? 'bg-[#3B9EFF]/12 border-[#3B9EFF]/30 text-[#3B9EFF]' : 'bg-[#161922] border-[#2E3348] text-[#555E75] hover:border-[#3E4660] hover:text-[#B4BAC9]')"
+                            >{{ ccy }}</button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="bg-[#161922] border border-[#2E3348] rounded p-4">
-                    <h3 class="am-title-l3 mb-3 border-b border-[#252A3A] pb-2 uppercase tracking-wider"><div class="am-title-bar"></div>模型参数设置</h3>
-                    <div class="space-y-4">
-                      <div>
-                        <div class="flex justify-between mb-1.5">
-                          <label class="text-[13px] text-[#B4BAC9]">风险厌恶系数 (Risk Aversion)</label>
-                          <span class="text-[13px] text-[#3B9EFF] font-mono font-bold">2.5</span>
-                        </div>
-                        <input type="range" min="1" max="10" step="0.1" value="2.5" class="w-full accent-[#3B9EFF]" />
-                        <div class="flex justify-between text-[10px] text-[#94A3B8] mt-0.5 font-mono">
-                          <span>激进 (1.0)</span><span>保守 (10.0)</span>
+
+                  <!-- ── Section 2: Asset Universe ── -->
+                  <div class="bg-[#161922] border border-[#2E3348] rounded overflow-hidden">
+                    <button
+                      @click="expandedSections.assets = !expandedSections.assets"
+                      class="w-full px-4 py-2.5 flex items-center justify-between bg-[#1A1E2B] hover:bg-[#1E2235] transition-colors"
+                    >
+                      <h3 class="am-title-l3 flex items-center space-x-2.5">
+                        <div class="am-title-bar"></div>
+                        <span>资产域 & 权重约束</span>
+                        <span class="text-[10px] font-mono text-[#555E75] tracking-widest ml-1">ASSET UNIVERSE</span>
+                      </h3>
+                      <div class="flex items-center space-x-2.5">
+                        <span class="text-[10px] font-mono text-[#3B9EFF]">
+                          {{ classicParams.assetUniverse.filter((a: any) => a.enabled).length }}/{{ classicParams.assetUniverse.length }} 已启用
+                        </span>
+                        <ArrowDown :class="cn('w-3 h-3 text-[#94A3B8] transition-transform duration-200', expandedSections.assets ? 'rotate-180' : '')" />
+                      </div>
+                    </button>
+                    <div v-show="expandedSections.assets">
+                      <!-- Column headers -->
+                      <div class="grid gap-3 px-4 py-1.5 bg-[#202431] border-y border-[#252A3A] text-[10px] font-mono text-[#555E75] uppercase tracking-widest" style="grid-template-columns: 28px 1fr 110px 110px">
+                        <span></span>
+                        <span>资产类别</span>
+                        <span class="text-center">最低权重</span>
+                        <span class="text-center">最高权重</span>
+                      </div>
+                      <div class="px-2 py-1.5 space-y-0.5">
+                        <div
+                          v-for="asset in classicParams.assetUniverse" :key="asset.id"
+                          :class="cn('grid gap-3 items-center px-2 py-2 rounded transition-colors', asset.enabled ? 'hover:bg-[#1E2235]' : 'opacity-40')"
+                          style="grid-template-columns: 28px 1fr 110px 110px"
+                        >
+                          <!-- Toggle -->
+                          <button
+                            @click="asset.enabled = !asset.enabled"
+                            :class="cn('w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0', asset.enabled ? 'bg-[#3B9EFF] border-[#3B9EFF]' : 'bg-transparent border-[#2E3348] hover:border-[#3B9EFF]/40')"
+                          >
+                            <Select v-if="asset.enabled" class="w-3 h-3 text-white" />
+                          </button>
+                          <!-- Name + tag -->
+                          <div class="flex items-center space-x-2 min-w-0">
+                            <span :class="cn('text-[13px] truncate', asset.enabled ? 'text-[#E8ECF4]' : 'text-[#555E75]')">{{ asset.label }}</span>
+                            <span class="text-[10px] font-mono text-[#555E75] bg-[#202431] border border-[#252A3A] px-1.5 py-px rounded shrink-0">{{ asset.assetClass }}</span>
+                          </div>
+                          <!-- Min Weight -->
+                          <div class="flex items-center space-x-1">
+                            <input
+                              type="number" v-model.number="asset.minWeight"
+                              :min="0" :max="asset.maxWeight" :disabled="!asset.enabled"
+                              class="w-full operable-zone text-[#E8ECF4] text-[12px] font-mono rounded px-2 py-1.5 focus:outline-none text-center disabled:opacity-30"
+                            />
+                            <span class="text-[11px] text-[#555E75] font-mono shrink-0">%</span>
+                          </div>
+                          <!-- Max Weight -->
+                          <div class="flex items-center space-x-1">
+                            <input
+                              type="number" v-model.number="asset.maxWeight"
+                              :min="asset.minWeight" :max="100" :disabled="!asset.enabled"
+                              class="w-full operable-zone text-[#E8ECF4] text-[12px] font-mono rounded px-2 py-1.5 focus:outline-none text-center disabled:opacity-30"
+                            />
+                            <span class="text-[11px] text-[#555E75] font-mono shrink-0">%</span>
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <div class="flex justify-between mb-1.5">
-                          <label class="text-[13px] text-[#B4BAC9]">预期收益率上限 (Max Target Return)</label>
-                          <span class="text-[13px] text-[#3B9EFF] font-mono font-bold">15.0%</span>
+                      <!-- Short selling toggle -->
+                      <div class="px-4 py-2.5 flex items-center justify-between border-t border-[#252A3A] bg-[#1A1E2B]">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-[13px] text-[#B4BAC9]">允许做空</span>
+                          <span class="text-[11px] font-mono text-[#555E75]">最低权重可设为负值</span>
                         </div>
-                        <input type="range" min="5" max="30" step="0.5" value="15" class="w-full accent-[#3B9EFF]" />
+                        <button
+                          @click="classicParams.allowShortSelling = !classicParams.allowShortSelling"
+                          :class="cn('w-9 h-5 rounded-full transition-colors relative flex items-center shrink-0', classicParams.allowShortSelling ? 'bg-[#3B9EFF]' : 'bg-[#2E3348]')"
+                        >
+                          <span :class="cn('w-3.5 h-3.5 rounded-full bg-white shadow transition-transform absolute', classicParams.allowShortSelling ? 'translate-x-[18px]' : 'translate-x-[2px]')"></span>
+                        </button>
                       </div>
                     </div>
                   </div>
+
+                  <!-- ── Section 3: Risk & Return ── -->
+                  <div class="bg-[#161922] border border-[#2E3348] rounded overflow-hidden">
+                    <button
+                      @click="expandedSections.risk = !expandedSections.risk"
+                      class="w-full px-4 py-2.5 flex items-center justify-between bg-[#1A1E2B] hover:bg-[#1E2235] transition-colors"
+                    >
+                      <h3 class="am-title-l3 flex items-center space-x-2.5">
+                        <div class="am-title-bar"></div>
+                        <span>风险 & 收益参数</span>
+                        <span class="text-[10px] font-mono text-[#555E75] tracking-widest ml-1">RISK & RETURN</span>
+                      </h3>
+                      <ArrowDown :class="cn('w-3 h-3 text-[#94A3B8] transition-transform duration-200', expandedSections.risk ? 'rotate-180' : '')" />
+                    </button>
+                    <div v-show="expandedSections.risk" class="p-4 space-y-4">
+                      <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+                        <!-- Risk Aversion -->
+                        <div>
+                          <div class="flex justify-between mb-1.5">
+                            <label class="text-[13px] text-[#B4BAC9]">风险厌恶系数 <span class="text-[11px] font-mono text-[#555E75]">λ</span></label>
+                            <span class="text-[13px] text-[#3B9EFF] font-mono font-bold">{{ classicParams.riskAversion.toFixed(1) }}</span>
+                          </div>
+                          <input type="range" v-model.number="classicParams.riskAversion" min="1" max="10" step="0.1" class="w-full accent-[#3B9EFF]" />
+                          <div class="flex justify-between text-[10px] text-[#555E75] mt-0.5 font-mono">
+                            <span>激进 1.0</span><span>保守 10.0</span>
+                          </div>
+                        </div>
+                        <!-- Target Volatility -->
+                        <div>
+                          <div class="flex justify-between mb-1.5">
+                            <label class="text-[13px] text-[#B4BAC9]">目标波动率上限 <span class="text-[11px] font-mono text-[#555E75]">σ</span></label>
+                            <span class="text-[13px] text-[#FFAB00] font-mono font-bold">{{ classicParams.targetVolatility.toFixed(1) }}%</span>
+                          </div>
+                          <input type="range" v-model.number="classicParams.targetVolatility" min="2" max="25" step="0.5" class="w-full accent-[#FFAB00]" />
+                          <div class="flex justify-between text-[10px] text-[#555E75] mt-0.5 font-mono">
+                            <span>2.0%</span><span>25.0%</span>
+                          </div>
+                        </div>
+                        <!-- Max Drawdown -->
+                        <div>
+                          <div class="flex justify-between mb-1.5">
+                            <label class="text-[13px] text-[#B4BAC9]">最大回撤约束</label>
+                            <span class="text-[13px] text-[#F04864] font-mono font-bold">-{{ classicParams.maxDrawdown.toFixed(1) }}%</span>
+                          </div>
+                          <input type="range" v-model.number="classicParams.maxDrawdown" min="5" max="40" step="1" class="w-full accent-[#F04864]" />
+                          <div class="flex justify-between text-[10px] text-[#555E75] mt-0.5 font-mono">
+                            <span>-5%</span><span>-40%</span>
+                          </div>
+                        </div>
+                        <!-- Target Return -->
+                        <div>
+                          <div class="flex justify-between mb-1.5">
+                            <label class="text-[13px] text-[#B4BAC9]">预期收益率目标</label>
+                            <span class="text-[13px] text-[#00C9A7] font-mono font-bold">{{ classicParams.targetReturnMax.toFixed(1) }}%</span>
+                          </div>
+                          <input type="range" v-model.number="classicParams.targetReturnMax" min="3" max="30" step="0.5" class="w-full accent-[#00C9A7]" />
+                          <div class="flex justify-between text-[10px] text-[#555E75] mt-0.5 font-mono">
+                            <span>3.0%</span><span>30.0%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- VaR Confidence -->
+                      <div class="flex items-center justify-between bg-[#1A1E2B] border border-[#2E3348] rounded px-3 py-2.5">
+                        <div>
+                          <span class="text-[13px] text-[#B4BAC9]">VaR 置信水平</span>
+                          <span class="text-[11px] font-mono text-[#555E75] ml-2">风险价值约束</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                          <button
+                            v-for="cl in [90, 95, 99]" :key="cl"
+                            @click="classicParams.varConfidence = cl"
+                            :class="cn('px-3 py-1 text-[12px] font-mono rounded border transition-colors', classicParams.varConfidence === cl ? 'bg-[#3B9EFF]/12 border-[#3B9EFF]/30 text-[#3B9EFF]' : 'bg-[#161922] border-[#2E3348] text-[#555E75] hover:border-[#3E4660] hover:text-[#B4BAC9]')"
+                          >{{ cl }}%</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ── Section 4: Model-Specific (dynamic schema) ── -->
+                  <template v-if="currentModelExtraSchemas.length > 0">
+                    <div
+                      v-for="group in currentModelExtraSchemas" :key="group.titleEn"
+                      class="bg-[#161922] border border-[#3B9EFF]/22 rounded overflow-hidden"
+                    >
+                      <button
+                        @click="toggleExtraSection(group.titleEn)"
+                        class="w-full px-4 py-2.5 flex items-center justify-between bg-[#3B9EFF]/6 hover:bg-[#3B9EFF]/10 transition-colors"
+                      >
+                        <h3 class="am-title-l3 flex items-center space-x-2.5">
+                          <div class="am-title-bar" style="background:#3B9EFF"></div>
+                          <span>{{ group.title }}</span>
+                          <span class="ml-2 px-1.5 py-px rounded text-[10px] font-mono bg-[#3B9EFF]/12 text-[#3B9EFF] border border-[#3B9EFF]/25">
+                            {{ selectedModel?.name.split(' ')[0] }} 专属
+                          </span>
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                          <span v-if="group.desc" class="text-[10px] font-mono text-[#555E75]">{{ group.desc }}</span>
+                          <ArrowDown :class="cn('w-3 h-3 text-[#94A3B8] transition-transform duration-200', expandedExtraSections[group.titleEn] !== false ? 'rotate-180' : '')" />
+                        </div>
+                      </button>
+                      <div v-show="expandedExtraSections[group.titleEn] !== false" class="p-4 space-y-4">
+                        <template v-for="param in group.params" :key="param.key">
+
+                          <!-- Slider -->
+                          <div v-if="param.type === 'slider'">
+                            <div class="flex justify-between mb-1.5">
+                              <label class="text-[13px] text-[#B4BAC9]">{{ param.label }}</label>
+                              <span class="text-[13px] text-[#3B9EFF] font-mono font-bold">{{ (classicParams as any)[param.key] }}{{ param.unit || '' }}</span>
+                            </div>
+                            <input type="range" v-model.number="(classicParams as any)[param.key]" :min="param.min" :max="param.max" :step="param.step" class="w-full accent-[#3B9EFF]" />
+                            <div v-if="param.hint" class="text-[10px] font-mono text-[#555E75] mt-1">{{ param.hint }}</div>
+                          </div>
+
+                          <!-- Select -->
+                          <div v-else-if="param.type === 'select'">
+                            <label class="block text-[11px] text-[#94A3B8] mb-1.5 uppercase tracking-wider font-mono">{{ param.label }}</label>
+                            <select v-model="(classicParams as any)[param.key]" class="w-full operable-zone text-[#E8ECF4] text-[13px] rounded px-3 py-2 focus:outline-none">
+                              <option v-for="opt in param.options" :key="opt">{{ opt }}</option>
+                            </select>
+                            <div v-if="param.hint" class="text-[10px] font-mono text-[#555E75] mt-1">{{ param.hint }}</div>
+                          </div>
+
+                          <!-- BL Views Table -->
+                          <div v-else-if="param.type === 'views_table'">
+                            <div class="flex items-center justify-between mb-2">
+                              <label class="text-[13px] text-[#B4BAC9]">{{ param.label }}</label>
+                              <button @click="addBlView" class="flex items-center space-x-1.5 text-[11px] font-mono text-[#3B9EFF] hover:text-[#5CB3FF] transition-colors">
+                                <span class="w-4 h-4 rounded border border-[#3B9EFF]/40 flex items-center justify-center font-bold leading-none">+</span>
+                                <span>添加观点行</span>
+                              </button>
+                            </div>
+                            <div class="rounded border border-[#252A3A] overflow-hidden">
+                              <!-- Header -->
+                              <div class="grid gap-2 px-3 py-1.5 bg-[#202431] text-[10px] font-mono text-[#555E75] uppercase tracking-widest border-b border-[#252A3A]" style="grid-template-columns: 1fr 72px 100px 80px 28px">
+                                <span>资产类别</span><span class="text-center">方向</span><span class="text-center">超额收益预期</span><span class="text-center">置信度</span><span></span>
+                              </div>
+                              <div v-for="(view, vi) in classicParams.bl_views" :key="vi"
+                                class="grid gap-2 px-3 py-1.5 items-center border-b border-[#252A3A] last:border-0 bg-[#1A1E2B] hover:bg-[#1E2235] transition-colors"
+                                style="grid-template-columns: 1fr 72px 100px 80px 28px"
+                              >
+                                <select v-model="view.asset" class="operable-zone text-[#E8ECF4] text-[12px] font-mono rounded px-2 py-1 focus:outline-none">
+                                  <option v-for="a in classicParams.assetUniverse.filter((a: any) => a.enabled)" :key="a.id">{{ a.label }}</option>
+                                </select>
+                                <div class="flex justify-center">
+                                  <button
+                                    @click="view.direction = view.direction === '↑' ? '↓' : '↑'"
+                                    :class="cn('w-full py-1 rounded border text-[13px] font-mono font-bold transition-colors', view.direction === '↑' ? 'bg-[#00C9A7]/10 border-[#00C9A7]/30 text-[#00C9A7]' : 'bg-[#F04864]/10 border-[#F04864]/30 text-[#F04864]')"
+                                  >{{ view.direction }}</button>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                  <input type="number" v-model.number="view.strength" step="0.5" class="w-full operable-zone text-[#E8ECF4] text-[12px] font-mono rounded px-2 py-1 focus:outline-none text-center" />
+                                  <span class="text-[11px] text-[#555E75] font-mono shrink-0">%</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                  <input type="number" v-model.number="view.confidence" min="1" max="99" class="w-full operable-zone text-[#E8ECF4] text-[12px] font-mono rounded px-2 py-1 focus:outline-none text-center" />
+                                  <span class="text-[11px] text-[#555E75] font-mono shrink-0">%</span>
+                                </div>
+                                <button @click="classicParams.bl_views.splice(vi, 1)" class="flex items-center justify-center text-[#555E75] hover:text-[#F04864] transition-colors">
+                                  <Close class="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <div v-if="classicParams.bl_views.length === 0" class="px-4 py-3 text-[12px] font-mono text-[#555E75] text-center italic">
+                                暂无观点 — 将使用纯市场均衡权重 (Π)
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Risk Budget Table -->
+                          <div v-else-if="param.type === 'budget_table'">
+                            <div class="flex items-center justify-between mb-2">
+                              <label class="text-[13px] text-[#B4BAC9]">{{ param.label }}</label>
+                              <span :class="cn('text-[12px] font-mono font-bold', Math.abs(classicParams.rp_budgets.reduce((s: number, b: any) => s + b.budget, 0) - 100) < 1 ? 'text-[#00C9A7]' : 'text-[#F04864]')">
+                                合计 {{ classicParams.rp_budgets.reduce((s: number, b: any) => s + b.budget, 0) }}%
+                              </span>
+                            </div>
+                            <div class="space-y-2.5">
+                              <div v-for="budget in classicParams.rp_budgets" :key="budget.asset" class="flex items-center space-x-3">
+                                <span class="w-16 text-[13px] text-[#B4BAC9] shrink-0 truncate">{{ budget.asset }}</span>
+                                <input type="range" v-model.number="budget.budget" min="0" max="80" step="1" class="flex-1 accent-[#3B9EFF]" />
+                                <span class="w-10 text-right text-[13px] text-[#3B9EFF] font-mono font-bold shrink-0">{{ budget.budget }}%</span>
+                              </div>
+                            </div>
+                          </div>
+
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
                 </div>
               </div>
 
@@ -1371,6 +1696,202 @@ const isApplying    = ref(false);   // loading state for confirm-and-navigate tr
 const showPushModal    = ref(false);
 const pushModalTarget  = ref<'allocation' | 'strategy'>('allocation');
 const isPushingBack    = ref(false); // loading state for push-modal confirm
+
+// ── Classic Form State ────────────────────────────────────────────────────────
+
+interface AssetUniverseItem {
+  id: string; label: string; assetClass: string;
+  enabled: boolean; minWeight: number; maxWeight: number;
+}
+interface BlView { asset: string; direction: '↑' | '↓'; strength: number; confidence: number; }
+interface RpBudget { asset: string; budget: number; }
+
+const DEFAULT_CLASSIC_PARAMS = () => ({
+  dataSource: 'Wind API (万得)',
+  startDate:  '2015-01-01',
+  endDate:    '2024-01-01',
+  rebalanceFreq: '季度',
+  returnType: '全收益',
+  currency:   'CNY',
+  assetUniverse: [
+    { id: 'a_share',     label: 'A股权益',   assetClass: '权益', enabled: true,  minWeight: 10, maxWeight: 50 },
+    { id: 'bond_rate',   label: '利率债',     assetClass: '固收', enabled: true,  minWeight: 20, maxWeight: 60 },
+    { id: 'bond_credit', label: '信用债',     assetClass: '固收', enabled: true,  minWeight: 0,  maxWeight: 30 },
+    { id: 'commodity',   label: '大宗商品',   assetClass: '商品', enabled: false, minWeight: 0,  maxWeight: 15 },
+    { id: 'gold',        label: '黄金',       assetClass: '商品', enabled: true,  minWeight: 0,  maxWeight: 20 },
+    { id: 'reits',       label: 'REITs',      assetClass: '另类', enabled: false, minWeight: 0,  maxWeight: 10 },
+    { id: 'hk_equity',   label: '港股',       assetClass: '权益', enabled: false, minWeight: 0,  maxWeight: 20 },
+    { id: 'overseas',    label: '海外权益',   assetClass: '权益', enabled: false, minWeight: 0,  maxWeight: 10 },
+  ] as AssetUniverseItem[],
+  allowShortSelling: false,
+  riskAversion:     2.5,
+  targetVolatility: 8.0,
+  maxDrawdown:      15.0,
+  targetReturnMax:  15.0,
+  varConfidence:    95,
+  // BL-specific
+  bl_tau:         0.05,
+  bl_equilibrium: '市值加权 (Mkt Cap Weighted)',
+  bl_views: [
+    { asset: 'A股权益', direction: '↑' as const, strength: 3.0,  confidence: 70 },
+    { asset: '利率债',  direction: '↓' as const, strength: -1.5, confidence: 60 },
+  ] as BlView[],
+  // RP-specific
+  rp_risk_tolerance: 0.10,
+  rp_budgets: [
+    { asset: 'A股权益', budget: 30 },
+    { asset: '利率债',  budget: 40 },
+    { asset: '信用债',  budget: 20 },
+    { asset: '黄金',    budget: 10 },
+  ] as RpBudget[],
+  // MC-specific
+  mc_n_simulations: '10,000',
+  mc_distribution:  '正态分布 (Gaussian)',
+  mc_correlation:   '静态历史相关',
+  mc_confidence:    95,
+  mc_horizon:       252,
+  // MF / Barra
+  factor_universe:    '中证800',
+  neutralization:     '行业 + 市值',
+  ic_decay:           60,
+  barra_model:        'CNE5 (中国市场)',
+  specific_risk_adj:  'Bayesian收缩',
+  factor_update_freq: '每日更新',
+});
+
+const classicParams = reactive(DEFAULT_CLASSIC_PARAMS());
+
+function resetClassicParams() {
+  Object.assign(classicParams, DEFAULT_CLASSIC_PARAMS());
+}
+
+const expandedSections = reactive({ data: true, assets: true, risk: true });
+const expandedExtraSections = reactive<Record<string, boolean>>({});
+
+const DATE_PRESETS = [
+  { label: '1Y',  years: 1  },
+  { label: '3Y',  years: 3  },
+  { label: '5Y',  years: 5  },
+  { label: '10Y', years: 10 },
+];
+
+function applyDatePreset(preset: { label: string; years: number }) {
+  const end   = new Date();
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - preset.years);
+  classicParams.endDate   = end.toISOString().slice(0, 10);
+  classicParams.startDate = start.toISOString().slice(0, 10);
+}
+
+function addBlView() {
+  const first = classicParams.assetUniverse.find(a => a.enabled);
+  if (!first) return;
+  classicParams.bl_views.push({ asset: first.label, direction: '↑', strength: 2.0, confidence: 65 });
+}
+
+function toggleExtraSection(titleEn: string) {
+  expandedExtraSections[titleEn] = expandedExtraSections[titleEn] === false ? true : false;
+}
+
+// ── Model Extra Schemas ──────────────────────────────────────────────────────
+
+interface ExtraParamGroup {
+  title: string; titleEn: string; desc?: string;
+  params: ExtraParam[];
+}
+interface ExtraParam {
+  key: string; label: string;
+  type: 'slider' | 'select' | 'views_table' | 'budget_table';
+  min?: number; max?: number; step?: number; unit?: string;
+  options?: string[]; hint?: string;
+}
+
+const MODEL_EXTRA_SCHEMAS: Record<string, ExtraParamGroup[]> = {
+  bl: [
+    {
+      title: 'BL 先验设置', titleEn: 'BL Prior',
+      params: [
+        { key: 'bl_tau',         label: '先验不确定性系数 (τ)', type: 'slider', min: 0.01, max: 0.15, step: 0.01,
+          hint: 'τ↓ 更信任市场均衡，τ↑ 更信任主观观点；通常取 0.025–0.05' },
+        { key: 'bl_equilibrium', label: '市场均衡基准', type: 'select',
+          options: ['市值加权 (Mkt Cap Weighted)', '等权 (Equal Weight)', 'CAPM 风险溢价'] },
+      ]
+    },
+    {
+      title: '主观观点矩阵', titleEn: 'Views Matrix',
+      desc: '表达对资产超额收益的预判',
+      params: [
+        { key: 'bl_views', label: '观点列表', type: 'views_table' }
+      ]
+    }
+  ],
+  rp: [
+    {
+      title: '风险预算分配', titleEn: 'Risk Budget',
+      desc: '目标风险贡献合计 100%',
+      params: [
+        { key: 'rp_risk_tolerance', label: '收敛容差 (ε)', type: 'slider', min: 0.01, max: 2.0, step: 0.01, unit: '%',
+          hint: '优化终止条件：各资产实际风险贡献与预算偏差 < ε' },
+        { key: 'rp_budgets', label: '风险预算', type: 'budget_table' }
+      ]
+    }
+  ],
+  mc: [
+    {
+      title: '蒙特卡洛模拟参数', titleEn: 'Simulation Config',
+      params: [
+        { key: 'mc_n_simulations', label: '模拟路径数', type: 'select',
+          options: ['1,000', '5,000', '10,000', '50,000', '100,000'] },
+        { key: 'mc_distribution',  label: '收益率分布假设', type: 'select',
+          options: ['正态分布 (Gaussian)', 't-分布 (重尾)', '历史自举 (Bootstrap)', 'Copula 模型'] },
+        { key: 'mc_correlation',   label: '相关矩阵模式', type: 'select',
+          options: ['静态历史相关', 'DCC-GARCH 动态', '压力情景相关矩阵'] },
+        { key: 'mc_confidence', label: '置信区间', type: 'slider', min: 90, max: 99, step: 1, unit: '%' },
+        { key: 'mc_horizon', label: '模拟时间窗口 (交易日)', type: 'slider', min: 21, max: 756, step: 21,
+          hint: '21=1月  63=1季  126=半年  252=1年  504=2年' },
+      ]
+    }
+  ],
+  mf: [
+    {
+      title: '多因子模型设置', titleEn: 'Factor Model',
+      params: [
+        { key: 'factor_universe', label: '选股域 (股票池)', type: 'select',
+          options: ['沪深300', '中证500', '中证800', '中证1000', '全 A 市场'] },
+        { key: 'neutralization',  label: '因子中性化方案', type: 'select',
+          options: ['无中性化', '行业中性', '行业 + 市值', '行业 + 市值 + Beta'] },
+        { key: 'ic_decay', label: 'IC 半衰期 (天)', type: 'slider', min: 20, max: 120, step: 5,
+          hint: '越短越重视近期因子有效性；通常取 40–80 天' },
+      ]
+    }
+  ],
+  barra: [
+    {
+      title: 'Barra 风险模型配置', titleEn: 'Barra Risk Model',
+      params: [
+        { key: 'barra_model',        label: 'Barra 模型版本', type: 'select',
+          options: ['CNE5 (中国市场)', 'CNE6', 'USE4 (美国市场)', 'GEM3 (全球)'] },
+        { key: 'specific_risk_adj',  label: '特异风险估计方法', type: 'select',
+          options: ['原始 OLS 估计', 'Bayesian收缩', '结构化模型调整'] },
+        { key: 'factor_update_freq', label: '因子暴露更新频率', type: 'select',
+          options: ['每日更新', '每周更新', '每月更新'] },
+      ]
+    }
+  ],
+};
+
+const currentModelExtraSchemas = computed<ExtraParamGroup[]>(() => {
+  if (!selectedModel.value) return [];
+  return MODEL_EXTRA_SCHEMAS[selectedModel.value.id] ?? [];
+});
+
+watch(selectedModel, (m) => {
+  const schemas = m ? (MODEL_EXTRA_SCHEMAS[m.id] ?? []) : [];
+  schemas.forEach(g => {
+    if (expandedExtraSections[g.titleEn] === undefined)
+      expandedExtraSections[g.titleEn] = true;
+  });
+}, { immediate: true });
 
 // ── Computed ─────────────────────────────────────────────────────────────────
 const leaderboardModels = computed(() =>
