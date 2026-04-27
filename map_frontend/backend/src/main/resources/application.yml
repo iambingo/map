@@ -1,0 +1,68 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: map-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/map_db
+    username: map_user
+    password: map_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.map.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: isDeleted
+      logic-delete-value: true
+      logic-not-delete-value: false
+
+# JWT 配置
+jwt:
+  secret: MAP_JWT_SECRET_CHANGE_IN_PRODUCTION_AT_LEAST_256_BITS
+  expiration: 86400        # 24 小时（秒）
+  refresh-expiration: 604800  # 7 天（秒）
+
+logging:
+  level:
+    com.map: debug
+    org.springframework.security: info
+
+---
+# 开发环境覆盖
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/map_db_dev

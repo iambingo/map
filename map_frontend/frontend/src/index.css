@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@source "../index.html";
+@source "./**/*.{vue,js,ts,jsx,tsx}";
+
+@theme {
+  /* 100% offline-safe system font stack */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei",
+    "PingFang SC", "Hiragino Sans GB",
+    Roboto, "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
+}
+
+/* ── AlphaMind Color Tokens V2 (Brighter Dark) ─────────────────────────────── */
+:root {
+  --am-bg-base:      #161922;   /* page background — brighter navy-grey          */
+  --am-bg-panel:     #202431;   /* card / panel — lifted warm grey               */
+  --am-bg-elevated:  #2A2E3D;   /* modal / dropdown — second lift                */
+  --am-bg-input:     #181C28;   /* input fields — slightly darker than panel     */
+  --am-border:       #2E3348;   /* default border — softer contrast              */
+  --am-border-sub:   #252A3A;   /* subtle inner divider                          */
+  --am-brand:        #3B9EFF;   /* primary brand — vivid cyan-blue               */
+  --am-brand-hover:  #5CB3FF;   /* brand blue hover                              */
+  --am-brand-dim:    #0F2240;   /* brand tinted background                       */
+  --am-text-1:       #E8ECF4;   /* primary text — brighter white-blue            */
+  --am-text-2:       #B4BAC9;   /* secondary / label text — upgraded for readability    */
+  --am-text-3:       #94A3B8;   /* muted / tertiary text — upgraded for readability    */
+  --am-gain:         #F04864;   /* positive P&L — Chinese financial RED          */
+  --am-loss:         #00C9A7;   /* negative P&L — Chinese financial GREEN        */
+  --am-warn:         #D89614;   /* warning amber                                 */
+  --am-accent-cyan:  #22D3EE;   /* accent cyan for highlights / logos            */
+  --am-sidebar-bg:   #1A1E2B;   /* sidebar background                            */
+  --am-tab-bar-bg:   #1C2030;   /* tab bar background                            */
+}
+
+body {
+  background-color: var(--am-bg-base);
+  color: var(--am-text-1);
+  @apply antialiased;
+  selection-background-color: rgba(59, 158, 255, 0.25);
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--am-bg-base); }
+::-webkit-scrollbar-thumb { background: var(--am-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #3E4460; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Data-density baseline ──────────────────────────────────────────────────── */
+/* Financial tables default to 12px; cells can override individually.           */
+table { font-size: 0.75rem; }
+
+/* ── Zone semantics: readonly vs operable ───────────────────────────────────── */
+/*                                                                               */
+/*  .readonly-zone  — purely display data (KPI cards, data tables, chart areas) */
+/*    • Sunken: darker base bg + inset shadow for depth recession               */
+/*    • No hover / focus response — user perceives "not clickable"              */
+/*                                                                               */
+/*  .operable-zone  — interactive containers (inputs, selects, editable rows)   */
+/*    • Lifted: slightly lighter bg than readonly                               */
+/*    • Default border + glow border + ambient shadow on hover / focus-within   */
+/*    • Clear visual cue: "this element responds to me"                         */
+/*                                                                               */
+/*  DISCIPLINE:                                                                  */
+/*    • NEVER hardcode bg/border on <input>, <select>, <textarea>.              */
+/*    • Use .operable-zone + layout utilities (rounded, px-*, py-*) only.       */
+/*    • NEVER hardcode bg on pure data display cards. Use .readonly-zone.       */
+/* ────────────────────────────────────────────────────────────────────────────── */
+
+.readonly-zone {
+  background-color: var(--am-bg-base);
+  border: 1px solid var(--am-border-sub);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.operable-zone {
+  background-color: var(--am-bg-input);
+  border: 1px solid var(--am-border);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.operable-zone:hover {
+  border-color: rgba(59, 158, 255, 0.40);
+  background-color: #1C2035;
+}
+.operable-zone:focus-within {
+  border-color: rgba(59, 158, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(59, 158, 255, 0.10), 0 0 12px rgba(59, 158, 255, 0.08);
+  background-color: #1C2035;
+}
+
+/* ── Legacy alias (kept for any existing usage) ─────────────────────────────── */
+.operable {
+  background-color: var(--am-bg-input);
+  border: 1px solid var(--am-border);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.operable:hover {
+  border-color: rgba(59, 158, 255, 0.40);
+}
+.operable:focus-within {
+  border-color: rgba(59, 158, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(59, 158, 255, 0.10);
+}
+
+/* ── Financial P&L color utilities ─────────────────────────────────────────── */
+/* Use .pnl-gain and .pnl-loss to avoid coupling to Tailwind color names.       */
+.pnl-gain { color: var(--am-gain); }
+.pnl-loss { color: var(--am-loss); }
+
+/* ── Flat financial table ────────────────────────────────────────────────────── */
+.fin-table { @apply w-full text-left border-collapse; }
+.fin-table thead tr { background-color: #1A1E2B; }
+.fin-table thead th {
+  @apply px-3 py-2 text-[10px] font-medium uppercase tracking-widest;
+  color: var(--am-text-3);
+  border-bottom: 1px solid var(--am-border-sub);
+}
+.fin-table tbody tr {
+  border-bottom: 1px solid var(--am-border-sub);
+  transition: background-color 150ms;
+}
+.fin-table tbody tr:hover { background-color: #2A2D3A; }
+.fin-table tbody td { @apply px-3 py-1.5; }
+
+/* ── AlphaMind brand button ─────────────────────────────────────────────────── */
+.btn-brand {
+  background-color: var(--am-brand);
+  @apply text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors;
+}
+.btn-brand:hover { background-color: var(--am-brand-hover); }
+.btn-brand:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Ghost button ───────────────────────────────────────────────────────────── */
+.btn-ghost {
+  background-color: transparent;
+  border: 1px solid var(--am-border);
+  @apply text-[#8B93A8] text-xs px-3 py-1.5 rounded transition-colors;
+}
+.btn-ghost:hover { background-color: var(--am-bg-elevated); color: var(--am-text-1); }
+
+/* ── MAP Logo glow effect ──────────────────────────────────────────────────── */
+.map-logo {
+  background: linear-gradient(135deg, #3B9EFF 0%, #22D3EE 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.3));
+}
+
+/* ── Native range slider (am-slider) ────────────────────────────────────────── */
+/* Track fill is set via :style binding: linear-gradient(to right, color, #252A3A) */
+input[type="range"].am-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  padding: 0;
+  background: #2A2D3A; /* fallback; overridden by :style on the element */
+}
+input[type="range"].am-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #3B9EFF);
+  border: 2px solid #161922;
+  cursor: grab;
+  box-shadow: 0 0 6px rgba(59, 158, 255, 0.45);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+input[type="range"].am-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 12px rgba(59, 158, 255, 0.65);
+}
+input[type="range"].am-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+  box-shadow: 0 0 18px rgba(59, 158, 255, 0.85);
+}
+input[type="range"].am-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #3B9EFF);
+  border: 2px solid #161922;
+  cursor: grab;
+  box-shadow: 0 0 6px rgba(59, 158, 255, 0.45);
+}
+input[type="range"].am-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: transparent;
+}
+input[type="range"].am-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+input[type="range"].am-slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Trapezoid tab bar (AlphaMind geek style) ───────────────────────────────── */
+.tab-trap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  /* extra left padding so text clears the 15% left slant */
+  padding: 0 16px 0 22px;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--am-text-2);
+  background-color: var(--am-bg-panel);
+  /* symmetric trapezoid: top narrow (15%–85%), bottom full-width — wider at base */
+  clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+  /* overlap = ~15% of typical tab width so slants from adjacent tabs align */
+  margin-left: -16px;
+  transition: color 150ms, background-color 150ms;
+  z-index: 0;
+  border-top: 2px solid transparent;
+}
+/* First tab: straight left edge, right side slants inward going down (top-wide) */
+.tab-trap-first {
+  clip-path: polygon(0% 0%, 85% 0%, 100% 100%, 0% 100%);
+  margin-left: 0;
+  padding-left: 12px;
+  padding-right: 22px;
+}
+.tab-trap:hover {
+  color: var(--am-text-1);
+  background-color: var(--am-bg-elevated);
+  z-index: 1;
+}
+.tab-trap-active {
+  color: var(--am-brand);
+  background-color: var(--am-bg-base);
+  border-top-color: var(--am-brand);
+  z-index: 2;
+}
+
+/* ── Typography baseline (heading hierarchy) ────────────────────────────────── */
+@layer components {
+  .am-title-l1 {
+    @apply text-sm font-bold text-[#F8FAFC] flex items-center;
+  }
+  .am-title-l2 {
+    @apply text-[13px] font-bold text-[#E5EAF3] flex items-center;
+  }
+  .am-title-l3 {
+    @apply text-xs font-medium text-[#B4BAC9] flex items-center;
+  }
+  .am-title-bar {
+    @apply w-1 h-3.5 bg-[#3B9EFF] rounded-sm mr-2 shrink-0;
+  }
+}
