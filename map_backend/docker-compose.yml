@@ -1,0 +1,61 @@
+# ── MAP 项目本地开发环境 — TDSQL for MySQL 8 兼容模式 ───────────────────
+# 说明：
+#   TDSQL for MySQL 8 基于 MySQL 8.0 内核，腾讯在其上叠加了分布式事务、
+#   分库分表、强一致同步等企业级能力。本地开发用 Docker 跑 MySQL 8.0，
+#   配置与 TDSQL 保持一致（端口、SQL Mode、字符集、认证插件等）。
+#
+# 生产环境切换到真实 TDSQL 只需改 .env 中的 DB_HOST / DB_PORT，
+# 后端代码层零改动（aiomysql 驱动 + SQLAlchemy AsyncEngine）。
+#
+# 快速启动：
+#   docker compose up -d          # 启动
+#   docker compose down           # 停止（数据卷保留）
+#   docker compose down -v        # 停止并清空所有数据
+#
+# 连接信息（对应 map_backend/.env 中 DB_HOST/DB_PORT 等）：
+#   host    : 127.0.0.1
+#   port    : 5400          ← TDSQL 默认端口
+#   database: mapdb
+#   user    : mapuser
+#   password: mappass
+
+services:
+  tdsql:
+    # TDSQL for MySQL 8 内核 = MySQL 8.0，此处使用官方 8.0 镜像
+    # 配置与 TDSQL 默认实例对齐
+    image: mysql:8.0
+    container_name: map_tdsql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: mapdb
+      MYSQL_USER: mapuser
+      MYSQL_PASSWORD: mappass
+    ports:
+      - "5400:3306"       # TDSQL 默认端口 5400 → 容器内部 3306
+    volumes:
+      - map_tdsql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d   # 可选：放置 .sql 初始化脚本
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+      --lower_case_table_names=1
+      --max_connections=3000
+      --innodb_buffer_pool_size=256M
+      --innodb_flush_log_at_trx_commit=1
+      --sync_binlog=1
+      --binlog_format=ROW
+      --log_bin_trust_function_creators=1
+      --skip-name-resolve
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-P", "3306", "-umapuser", "-pmappass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  map_tdsql_data:
+    driver: local

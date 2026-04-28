@@ -1,49 +1,168 @@
-# MAP 后端运行与部署指南
+# MAP 后端本地开发环境 — 启动指南
 
-## 本地开发环境启动
+## 前置条件
 
-### 前置条件
+| 组件 | 版本/说明 |
+|------|-----------|
+| Python | 3.12+ |
+| Docker Desktop | 必须运行中（Windows 下先打开 Docker Desktop 等它就绪） |
 
-| 组件 | 必须？ | 说明 |
-|------|--------|------|
-| Python 3.12+ | 必须 | |
-| TDSQL (MySQL 8.0) | 推荐 | 通过 `docker compose up -d` 启动，或使用 SQLite 模式跳过 |
-| Redis | 可选 | 未启动时自动降级，不影响功能 |
-| RocketMQ | 可选 | 未安装时使用 Mock 模式 |
+可选组件（未启动时自动降级）：
+- **Redis**：未启动时自动跳过，不影响功能
+- **RocketMQ**：未配置时使用 Mock 模式，不影响功能
 
-### 快速启动（最简模式）
+---
 
-不需要任何外部依赖，一条命令即可：
+## 方式一：完整模式（MySQL + 完整功能）
+
+### 第 1 步：确认 Docker Desktop 在运行
+
+在任务栏右下角看到 Docker 图标（绿色表示运行中）即可。**必须先开 Docker，否则后面的 `docker compose up` 会失败。**
+
+### 第 2 步：启动 MySQL 容器
 
 ```powershell
-# 在 map_backend 目录下
-.\install_deps.ps1   # 首次运行或依赖变更时执行，安装到 backend\venv
+cd D:\Desktop\MAP项目
+docker compose up -d
+```
 
-# 使用 SQLite 模式启动（无需 MySQL/Redis/RocketMQ）
-$env:MAP_USE_SQLITE = "true"
-.\run_dev.ps1
+容器名 `map_tdsql`，端口 `127.0.0.1:5400`，账号 `mapuser / mappass`。
+
+**如需清空数据重建**（比如种子数据乱码时）：
+```powershell
+docker compose down -v   # 删除数据卷
+docker compose up -d     # 重建，会自动执行 init SQL
+```
+
+### 第 3 步：安装 Python 依赖
+
+```powershell
+cd D:\Desktop\MAP项目\map_backend
+
+# 首次需要创建 venv
+python -m venv venv
+
+# 激活虚拟环境
+.\venv\Scripts\activate
+
+# 安装依赖（首次或 requirements.txt 变更时执行）
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+> **注意**：必须激活 venv 后再安装，确保依赖装在正确的解释器里。
+> 如果 `requirements.txt` 安装时报 `UnicodeDecodeError`，说明文件编码有问题，重新下载或保存为 UTF-8-BOM 格式。
+
+### 第 4 步：初始化数据库表
+
+```powershell
+# 通过 init_db.py 创建表结构（使用同步引擎直接连 MySQL）
+python -c "
+import asyncio
+from app.core.db_tdsql import engine
+from app.core.orm_base import Base
+import app.modules.committee.models
+import app.modules.committee.mixed_models
+import app.modules.orchestrator.models
+import app.modules.asset_allocation.models
+import app.modules.auth.models
+
+async def main():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await engine.dispose()
+
+asyncio.run(main())
+print('Tables created.')
+"
+```
+
+或使用 `init_db.py` 走同步连接（需要额外安装 `pymysql`）：
+```powershell
+python init_db.py --db "mysql+pymysql://mapuser:mappass@127.0.0.1:5400/mapdb?charset=utf8mb4"
+```
+
+### 第 5 步：（可选）灌入演示数据
+
+```powershell
+python seed_mixed.py
+```
+
+### 第 6 步：启动开发服务器
+
+```powershell
+# 方式 A：用虚拟环境的 python 直接运行
+.\venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# 方式 B：已激活 venv 的情况下
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 启动成功后访问：
 - **API 文档**：http://localhost:8000/docs
 - **健康检查**：http://localhost:8000/health
 
-### 完整模式（含 TDSQL + Redis + RocketMQ）
+### 验证
 
 ```powershell
-# 1. 启动 TDSQL
-cd D:\Desktop\MAP项目
-docker compose up -d
+# 健康检查
+curl http://localhost:8000/health
 
-# 2. 初始化数据库（创建表结构）
-cd map_backend
-python init_db.py --db "mysql+aiomysql://mapuser:mappass@127.0.0.1:5400/mapdb?charset=utf8mb4"
+# 问卷汇总接口（验证中文编码是否正常）
+curl http://localhost:8000/api/v1/committee/mixed/sessions
+```
 
-# 3. 启动后端
+---
+
+## 方式二：最简模式（SQLite，无需 Docker）
+
+不需要 MySQL/Redis/RocketMQ，适合快速跑通代码。
+
+```powershell
+cd D:\Desktop\MAP项目\map_backend
+
+# 创建 venv（首次）
+python -m venv venv
+.\venv\Scripts\activate
+
+# 安装依赖
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 创建 SQLite 数据库表
+python init_db.py
+
+# 设置环境变量使用 SQLite
+$env:MAP_USE_SQLITE = "true"
+
+# 启动
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+## 方式三：一键启动脚本
+
+如果 venv 和依赖都已经装好：
+
+```powershell
+cd D:\Desktop\MAP项目\map_backend
 .\run_dev.ps1
 ```
 
-### 认证说明
+> `run_dev.ps1` 仅启动 uvicorn，不会自动创建 venv 或安装依赖。
+> 如果脚本报错 `ModuleNotFoundError`，说明 venv 里缺依赖，回到方式一第 3 步重新装。
+
+---
+
+## 端口清单
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| FastAPI / Uvicorn | 8000 | 后端主服务 |
+| MySQL (Docker) | 5400 | 数据库，Docker 映射端口 |
+
+---
+
+## 认证说明
 
 本地 `DEBUG=true` 模式下，所有接口自动使用 `user_id=1`，无需 SSO 登录：
 
@@ -51,115 +170,70 @@ python init_db.py --db "mysql+aiomysql://mapuser:mappass@127.0.0.1:5400/mapdb?ch
 # 直连测试（无需 token）
 curl http://localhost:8000/api/v1/committee/meetings
 curl http://localhost:8000/api/v1/workspace/navigation
-curl http://localhost:8000/api/v1/asset-allocation/classes
 ```
 
-如需手动模拟认证（模拟 SSO 登录后的请求）：
+如需手动模拟认证：
 
 ```powershell
-# 1. 生成一个测试 JWT
-python -c "from app.core.security import create_access_token; print(create_access_token(subject=1))"
+# 生成测试 JWT
+.\venv\Scripts\python -c "from app.core.security import create_access_token; print(create_access_token(subject=1))"
 
-# 2. 在请求头中携带
+# 携带 token 请求
 curl -H "Authorization: Bearer <上面输出的token>" http://localhost:8000/api/v1/auth/me
 ```
 
-### 端口清单
-
-| 服务 | 端口 | 用途 |
-|------|------|------|
-| FastAPI / Uvicorn | 8000 | 后端主服务 |
-| TDSQL (MySQL) | 5400 | 数据库（Docker 映射） |
-| Redis | 6379 | 缓存 |
-| RocketMQ | 9876 | 消息队列 |
-
-### 常用运维脚本
-
-| 脚本 | 功能 |
-|------|------|
-| `.\run_dev.ps1` | 启动开发服务器（热重载） |
-| `.\install_deps.ps1` | 安装/更新 Python 依赖到 `venv` |
-| `python init_db.py` | 创建/更新数据库表（SQLite 或 TDSQL） |
-| `docker compose down -v` | 清空 TDSQL 数据（谨慎使用） |
-
 ---
 
-## 生产环境部署
+## 常见问题
 
-### 配置变更清单
+### Docker Desktop 没有运行
 
-以下配置项必须从开发值改为生产值：
+`docker compose up -d` 会报错。必须先打开 Docker Desktop，等状态栏图标变绿后再执行。
 
-| 配置项 | 开发值 | 生产值 | 说明 |
-|--------|--------|--------|------|
-| `APP_ENV` | `development` | `production` | |
-| `DEBUG` | `true` | `false` | |
-| `SECRET_KEY` | `dev-secret-key-change-in-production` | **必须更换为随机密钥** | |
-| `DB_HOST` | `127.0.0.1` | 生产 TDSQL 地址 | |
-| `DB_USER` / `DB_PASSWORD` | `mapuser` / `mappass` | 生产账号 | |
-| `REDIS_HOST` | `127.0.0.1` | 生产 Redis 地址 | |
-| `ROCKETMQ_NAME_SERVER` | `127.0.0.1:9876` | 生产 RocketMQ 地址 | |
-| `SSO_LOGIN_REDIRECT_URL` | `http://localhost:5173` | 生产前端地址 | |
-| `CORS_ORIGINS` | `*` | 前端实际域名 | |
-| `PORTFOLIO_SYS_URL` | 空 | 组合系统 API 地址 | 可选 |
-| `RISK_SYS_URL` | 空 | 风控系统 API 地址 | 可选 |
+### `pip install` 报 `UnicodeDecodeError: 'gbk' codec can't decode`
 
-### CORS 配置
-
-只需在 `.env` 中配置，无需改代码：
-
-```ini
-CORS_ORIGINS=https://your-frontend-domain.com
+Windows 下 pip 读取 `requirements.txt` 时可能用 GBK 解码。该文件已保存为 UTF-8 with BOM，如果仍有问题，可以尝试：
+```powershell
+pip install -r requirements.txt --no-cache-dir
 ```
 
-### SSO 回调配置
+### MySQL 容器启动后连不上
 
-在公司统一门户后台配置回调 URL：
-
+检查容器状态：
+```powershell
+docker ps | Select-String map_tdsql
 ```
-https://your-backend-domain/auth/sso-callback
-```
-
-### 部署前检查清单
-
-- [ ] `SECRET_KEY` 已更换为高强度随机密钥
-- [ ] `DEBUG` 设为 `false`
-- [ ] `APP_ENV` 设为 `production`
-- [ ] 数据库、Redis、RocketMQ 地址已更新
-- [ ] `SSO_LOGIN_REDIRECT_URL` 指向生产前端
-- [ ] `CORS_ORIGINS` 已指定前端域名
-- [ ] `map_users` 表已创建
-- [ ] 门户后台已配置 SSO 回调 URL
-
-### 健康检查
-
-```
-GET https://your-backend-domain/health
+如果没有运行，查看日志：
+```powershell
+docker logs map_tdsql
 ```
 
-返回：
-```json
-{"status": "ok", "version": "0.1.0", "env": "production"}
+### 种子数据中文乱码
+
+MySQL 容器首次启动时执行了 init SQL，如果当时文件编码不对就会存成乱码。解决：
+```powershell
+docker compose down -v    # 清空数据
+docker compose up -d      # 重建，会重新执行 init SQL（确保 .sql 文件是 UTF-8 编码）
 ```
 
-### 启动命令（生产）
+### `ModuleNotFoundError: No module named 'xxx'`
 
-生产环境建议使用 Gunicorn + Uvicorn workers：
-
-```bash
-gunicorn app.main:app \
-  --bind 0.0.0.0:8000 \
-  --workers 4 \
-  --worker-class uvicorn.workers.UvicornWorker
+说明依赖没装在运行 uvicorn 的那个解释器里。确认：
+```powershell
+# 用 venv 里的 python 启动，不要直接用全局 python
+.\venv\Scripts\python -m uvicorn app.main:app --reload
 ```
 
 ---
 
-## 无需修改的项
+## 环境变量配置
 
-| 配置项 | 说明 |
-|--------|------|
-| `SSO_VALIDATE_URL` | 默认值已指向门户生产校验接口 |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | 8 小时，按需调整 |
-| `EXTERNAL_HTTP_TIMEOUT` | 10s |
-| `EXTERNAL_HTTP_RETRIES` | 3 次 |
+核心配置在 `.env` 文件中，常见需要调整的：
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `MAP_USE_SQLITE` | `false` | 设为 `true` 使用 SQLite |
+| `DB_PORT` | `5400` | MySQL 端口 |
+| `DEBUG` | `true` | 开发模式免认证 |
+| `SECRET_KEY` | `dev-secret-key...` | **生产环境必须更换** |
+| `CORS_ORIGINS` | `*` | 生产环境改为前端域名 |
