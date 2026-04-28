@@ -129,6 +129,32 @@ SEED_RECORDS = [
     },
 ]
 
+# ── 会议种子数据（与问卷 session_code 对应） ────────────────────────────────
+
+SEED_MEETINGS = [
+    {
+        "meeting_code": "IC-2025-Q3-001",
+        "title": "混合投资委员会 2025 Q3 配置决策会议",
+        "type": "MIXED",
+        "status": "PUBLISHED",
+        "scheduled_at": "2025-07-15 14:00:00",
+    },
+    {
+        "meeting_code": "IC-2025-Q4-001",
+        "title": "混合投资委员会 2025 Q4 配置决策会议",
+        "type": "MIXED",
+        "status": "PUBLISHED",
+        "scheduled_at": "2025-10-14 14:00:00",
+    },
+    {
+        "meeting_code": "IC-2026-Q2-001",
+        "title": "混合投资委员会 2026 Q2 配置决策会议",
+        "type": "MIXED",
+        "status": "VOTING",
+        "scheduled_at": "2026-04-15 14:00:00",
+    },
+]
+
 
 # ── 主逻辑 ──────────────────────────────────────────────────────────────────
 
@@ -148,21 +174,60 @@ def main() -> int:
         print("请先运行 python init_db.py 建表后再执行本脚本。")
         return 1
 
-    inserted = 0
-    skipped = 0
     now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
     with sqlite3.connect(str(db_path)) as conn:
         conn.row_factory = sqlite3.Row
 
-        # 获取当前最大 id，手动自增（兼容 BigInteger DDL 无 AUTOINCREMENT 的情况）
-        max_id_row = conn.execute(
+        # ── Step 1: 插入 ic_meetings ──────────────────────────────────────
+        print("\n[ic_meetings]")
+        mtg_max = conn.execute("SELECT COALESCE(MAX(id), 0) FROM ic_meetings").fetchone()
+        mtg_next_id = (mtg_max[0] or 0) + 1
+        mtg_inserted = 0
+        mtg_skipped = 0
+
+        for m in SEED_MEETINGS:
+            existing = conn.execute(
+                "SELECT id FROM ic_meetings WHERE meeting_code=? AND is_deleted=0",
+                (m["meeting_code"],),
+            ).fetchone()
+            if existing:
+                print(f"  SKIP  {m['meeting_code']} (已存在，不覆盖)")
+                mtg_skipped += 1
+                continue
+
+            conn.execute(
+                "INSERT INTO ic_meetings "
+                "(id, meeting_code, title, type, status, scheduled_at, created_by, is_deleted, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?)",
+                (
+                    mtg_next_id,
+                    m["meeting_code"],
+                    m["title"],
+                    m["type"],
+                    m["status"],
+                    m["scheduled_at"],
+                    now_str,
+                    now_str,
+                ),
+            )
+            print(f"  INSERT id={mtg_next_id} {m['meeting_code']} [{m['status']}]")
+            mtg_next_id += 1
+            mtg_inserted += 1
+
+        conn.commit()
+        print(f"  → 新增 {mtg_inserted} 条，跳过 {mtg_skipped} 条")
+
+        # ── Step 2: 插入 ic_mixed_questionnaire_submissions ───────────────
+        print("\n[ic_mixed_questionnaire_submissions]")
+        sub_max = conn.execute(
             "SELECT COALESCE(MAX(id), 0) FROM ic_mixed_questionnaire_submissions"
         ).fetchone()
-        next_id = (max_id_row[0] or 0) + 1
+        sub_next_id = (sub_max[0] or 0) + 1
+        sub_inserted = 0
+        sub_skipped = 0
 
         for rec in SEED_RECORDS:
-            # 幂等检查
             row = conn.execute(
                 "SELECT id FROM ic_mixed_questionnaire_submissions "
                 "WHERE session_code=? AND submitter_id=? AND is_deleted=0",
@@ -174,7 +239,7 @@ def main() -> int:
                     f"  SKIP  session={rec['session_code']} "
                     f"submitter={rec['submitter_id']} (已存在，不覆盖)"
                 )
-                skipped += 1
+                sub_skipped += 1
                 continue
 
             conn.execute(
@@ -182,7 +247,7 @@ def main() -> int:
                 "(id, session_code, submitter_id, status, questionnaire_json, submitted_at, is_deleted) "
                 "VALUES (?, ?, ?, ?, ?, ?, 0)",
                 (
-                    next_id,
+                    sub_next_id,
                     rec["session_code"],
                     rec["submitter_id"],
                     "SUBMITTED",
@@ -191,15 +256,16 @@ def main() -> int:
                 ),
             )
             print(
-                f"  INSERT id={next_id} session={rec['session_code']} "
+                f"  INSERT id={sub_next_id} session={rec['session_code']} "
                 f"submitter={rec['submitter_id']}"
             )
-            next_id += 1
-            inserted += 1
+            sub_next_id += 1
+            sub_inserted += 1
 
         conn.commit()
+        print(f"  → 新增 {sub_inserted} 条，跳过 {sub_skipped} 条")
 
-    print(f"\n完成：新增 {inserted} 条，跳过 {skipped} 条（已存在）")
+    print(f"\n完成：会议 +{mtg_inserted}，问卷 +{sub_inserted}")
     return 0
 
 
