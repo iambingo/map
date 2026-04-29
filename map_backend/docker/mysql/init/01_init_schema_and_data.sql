@@ -90,7 +90,11 @@ CREATE TABLE `ic_meetings` (
 
 LOCK TABLES `ic_meetings` WRITE;
 /*!40000 ALTER TABLE `ic_meetings` DISABLE KEYS */;
-INSERT INTO `ic_meetings` VALUES ('TEST-001','test meeting','FICC','DRAFT',NULL,1,1,'2026-04-22 05:23:28','2026-04-22 05:23:28',0);
+-- meeting_code, title, type, status, scheduled_at, created_by, id, created_at, updated_at, is_deleted
+INSERT INTO `ic_meetings` VALUES
+  ('IC-2026-Q2-MIXED-001','混合投资委员会 2026 Q2 配置决策会议','MIXED','VOTING', '2026-04-28 10:00:00',1,1,'2026-04-25 09:00:00','2026-04-28 10:00:00',0),
+  ('IC-2026-Q2-FICC-001', 'FICC 投资委员会 2026 Q2 债券配置会议','FICC', 'DRAFT',  '2026-05-06 14:00:00',1,2,'2026-04-25 09:00:00','2026-04-25 09:00:00',0),
+  ('IC-2026-Q1-MIXED-001','混合投资委员会 2026 Q1 配置决策会议','MIXED','PUBLISHED','2026-01-20 10:00:00',1,3,'2026-01-15 09:00:00','2026-01-20 15:30:00',0);
 /*!40000 ALTER TABLE `ic_meetings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -159,6 +163,9 @@ CREATE TABLE `ic_resolutions` (
 
 LOCK TABLES `ic_resolutions` WRITE;
 /*!40000 ALTER TABLE `ic_resolutions` DISABLE KEYS */;
+-- meeting_id, aggregated_taa, ai_minutes, published_at, published_by, id, created_at, updated_at, is_deleted
+INSERT INTO `ic_resolutions` VALUES
+  (3, '{"equity_view":"overweight","bond_view":"neutral","gold_view":"overweight","commodity_view":"underweight","choice_results":{"equity_view":{"mode":"overweight","votes":{"overweight":4,"neutral":1,"underweight":0}},"bond_view":{"mode":"neutral","votes":{"overweight":1,"neutral":3,"underweight":1}},"gold_view":{"mode":"overweight","votes":{"overweight":3,"neutral":2,"underweight":0}},"commodity_view":{"mode":"underweight","votes":{"overweight":0,"neutral":1,"underweight":4}}},"numeric_results":{"equity_target":{"mean":40.0,"median":40.0,"std":3.0},"bond_target":{"mean":45.0,"median":45.0,"std":2.0},"gold_target":{"mean":10.0,"median":10.0,"std":1.0},"cash_target":{"mean":5.0,"median":5.0,"std":0.0}},"published_at":"2026-01-20T15:30:00"}','本次会议委员整体对权益资产持增配观点，债券维持标配，黄金作为避险资产适度增配，大宗商品整体减配。','2026-01-20 15:30:00',1,1,'2026-01-20 15:30:00','2026-01-20 15:30:00',0);
 /*!40000 ALTER TABLE `ic_resolutions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -192,6 +199,11 @@ CREATE TABLE `ic_vote_records` (
 
 LOCK TABLES `ic_vote_records` WRITE;
 /*!40000 ALTER TABLE `ic_vote_records` DISABLE KEYS */;
+-- meeting_id, user_id, vote_json, submitted_at, id, created_at, updated_at, is_deleted
+INSERT INTO `ic_vote_records` VALUES
+  (1,1,'{"choice_items":{"equity_view":{"value":"overweight","label":"增配"},"bond_view":{"value":"neutral","label":"标配"},"gold_view":{"value":"overweight","label":"增配"},"commodity_view":{"value":"underweight","label":"减配"}},"numeric_items":{"equity_target":43,"bond_target":43,"gold_target":11,"cash_target":3}}','2026-04-28 11:00:00',1,'2026-04-28 11:00:00','2026-04-28 11:00:00',0),
+  (1,2,'{"choice_items":{"equity_view":{"value":"overweight","label":"增配"},"bond_view":{"value":"neutral","label":"标配"},"gold_view":{"value":"neutral","label":"标配"},"commodity_view":{"value":"underweight","label":"减配"}},"numeric_items":{"equity_target":40,"bond_target":45,"gold_target":10,"cash_target":5}}','2026-04-28 11:15:00',2,'2026-04-28 11:15:00','2026-04-28 11:15:00',0),
+  (1,3,'{"choice_items":{"equity_view":{"value":"neutral","label":"标配"},"bond_view":{"value":"overweight","label":"增配"},"gold_view":{"value":"overweight","label":"增配"},"commodity_view":{"value":"underweight","label":"减配"}},"numeric_items":{"equity_target":37,"bond_target":47,"gold_target":12,"cash_target":4}}','2026-04-28 11:30:00',3,'2026-04-28 11:30:00','2026-04-28 11:30:00',0);
 /*!40000 ALTER TABLE `ic_vote_records` ENABLE KEYS */;
 UNLOCK TABLES;
 

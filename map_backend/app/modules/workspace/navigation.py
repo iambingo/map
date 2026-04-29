@@ -19,11 +19,16 @@ from typing import Any
 
 
 class UserRole(str, enum.Enum):
-    ANALYST = "ANALYST"                   # 研究员
-    PM = "PM"                             # 组合经理
-    RISK_OFFICER = "RISK_OFFICER"         # 风险官
-    COMMITTEE_MEMBER = "COMMITTEE_MEMBER" # 投委会成员
-    ADMIN = "ADMIN"                       # 超级管理员（全卡片可见）
+    ANALYST = "ANALYST"                         # 研究员
+    PM = "PM"                                   # 组合经理
+    RISK_OFFICER = "RISK_OFFICER"               # 风险官
+    COMMITTEE_MEMBER = "COMMITTEE_MEMBER"       # 混合投委会委员
+    COMMITTEE_SECRETARY = "COMMITTEE_SECRETARY" # 混合投委会秘书
+    COMMITTEE_CHAIR = "COMMITTEE_CHAIR"         # 混合投委会主任委员
+    FICC_MEMBER = "FICC_MEMBER"                 # FICC投委会委员
+    FICC_SECRETARY = "FICC_SECRETARY"           # FICC投委会秘书
+    FICC_CHAIR = "FICC_CHAIR"                   # FICC投委会主任委员
+    ADMIN = "ADMIN"                             # 超级管理员（全卡片可见）
 
 
 # ── 九宫格卡片静态配置（不可变，严禁在运行时修改） ───────────────────────────
@@ -70,13 +75,16 @@ _ALL_TILES: tuple[TileConfig, ...] = (
     TileConfig("stress_test",    "压力测试",   "zap",          "/stress-test",           priority=6,
                roles=("RISK_OFFICER", "ADMIN")),
 
-    # ── 投委会成员 / PM（查阅历史）/ Admin ────────────────────────────
+    # ── 投委会（混合 & FICC）全角色 / PM（查阅历史）/ Admin ───────────
     TileConfig("ic_decision",    "投委会决策", "users",        "/committee/decisions",   priority=4,
-               roles=("COMMITTEE_MEMBER", "ADMIN")),
+               roles=("COMMITTEE_MEMBER", "COMMITTEE_SECRETARY", "COMMITTEE_CHAIR",
+                      "FICC_MEMBER", "FICC_SECRETARY", "FICC_CHAIR", "ADMIN")),
     TileConfig("ic_voting",      "投票管理",   "check-square", "/committee/voting",      priority=5,
-               roles=("COMMITTEE_MEMBER", "ADMIN")),
+               roles=("COMMITTEE_MEMBER", "COMMITTEE_SECRETARY", "COMMITTEE_CHAIR",
+                      "FICC_MEMBER", "FICC_SECRETARY", "FICC_CHAIR", "ADMIN")),
     TileConfig("ic_history",     "历史决议",   "archive",      "/committee/history",     priority=6,
-               roles=("COMMITTEE_MEMBER", "PM", "ADMIN")),
+               roles=("COMMITTEE_MEMBER", "COMMITTEE_SECRETARY", "COMMITTEE_CHAIR",
+                      "FICC_MEMBER", "FICC_SECRETARY", "FICC_CHAIR", "PM", "ADMIN")),
 )
 
 # badge 类型常量
